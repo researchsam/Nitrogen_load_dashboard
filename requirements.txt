@@ -2,3 +2,7 @@ pandas
 matplotlib
 ipywidgets
 numpy
+shapely
+pyproj
+geopandas
+requests
