@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Iowa County Nitrogen Loads Dashboard</title>
+
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #17202a;
+      --muted: #5f6b76;
+      --border: #d9e0e6;
+      --accent: #1f5a94;
+      --shadow: 0 8px 24px rgba(22, 34, 51, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    body {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 22px 14px;
+      z-index: 1000;
+    }
+
+    header h1 {
+      margin: 0 0 4px;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      min-height: 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      min-height: 560px;
+      background: #e8edf1;
+    }
+
+    aside {
+      overflow-y: auto;
+      padding: 16px;
+      border-left: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 17px;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    #yearLabel {
+      min-width: 62px;
+      padding: 5px 9px;
+      text-align: center;
+      border-radius: 7px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: white;
+      font-size: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      background: #f7f9fb;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .stat .value {
+      font-size: 19px;
+      font-weight: 700;
+    }
+
+    .county-name {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid var(--border);
+      padding: 8px 0;
+      font-size: 14px;
+    }
+
+    .detail-row:first-of-type {
+      border-top: 0;
+    }
+
+    .detail-row span:first-child {
+      color: var(--muted);
+    }
+
+    .note {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .status {
+      position: absolute;
+      left: 50%;
+      top: 95px;
+      transform: translateX(-50%);
+      z-index: 1100;
+      background: rgba(255,255,255,0.96);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      font-size: 14px;
+    }
+
+    .status.error {
+      border-color: #c0392b;
+      color: #922b21;
+      max-width: 520px;
+    }
+
+    .legend {
+      line-height: 18px;
+      color: #333;
+      background: white;
+      padding: 9px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+      font-size: 12px;
+    }
+
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 7px;
+      opacity: 0.9;
+      border: 1px solid rgba(0,0,0,0.15);
+    }
+
+    .leaflet-tooltip {
+      font-size: 13px;
+    }
+
+
+    /* Leaflet positioning fallback in case the external stylesheet is blocked. */
+    .leaflet-container {
+      overflow: hidden;
+      position: relative;
+      outline-offset: 1px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .leaflet-pane,
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow,
+    .leaflet-tile-container,
+    .leaflet-pane > svg,
+    .leaflet-pane > canvas,
+    .leaflet-zoom-box,
+    .leaflet-image-layer,
+    .leaflet-layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+
+    .leaflet-container .leaflet-overlay-pane svg {
+      max-width: none !important;
+      max-height: none !important;
+    }
+
+    .leaflet-container .leaflet-marker-pane img,
+    .leaflet-container .leaflet-shadow-pane img,
+    .leaflet-container .leaflet-tile-pane img,
+    .leaflet-container img.leaflet-image-layer,
+    .leaflet-container .leaflet-tile {
+      max-width: none !important;
+      max-height: none !important;
+      width: auto;
+      padding: 0;
+    }
+
+    .leaflet-tile {
+      visibility: hidden;
+    }
+
+    .leaflet-tile-loaded {
+      visibility: inherit;
+    }
+
+    .leaflet-zoom-animated {
+      transform-origin: 0 0;
+    }
+
+    .leaflet-zoom-hide {
+      visibility: hidden;
+    }
+
+    .leaflet-control {
+      position: relative;
+      z-index: 800;
+      pointer-events: auto;
+    }
+
+    .leaflet-top,
+    .leaflet-bottom {
+      position: absolute;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .leaflet-top { top: 0; }
+    .leaflet-right { right: 0; }
+    .leaflet-bottom { bottom: 0; }
+    .leaflet-left { left: 0; }
+
+    .leaflet-control-zoom a {
+      display: block;
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      text-decoration: none;
+      background: #fff;
+      color: #000;
+      border-bottom: 1px solid #ccc;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 62vh auto;
+      }
+
+      aside {
+        border-left: 0;
+        border-top: 1px solid var(--border);
+      }
+
+      #map {
+        min-height: 420px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Iowa County Nitrogen Loads</h1>
+    <p>Estimated annual county-level nitrogen load, flow-weighted mean concentration, and monitoring coverage, 2001–2019.</p>
+  </header>
+
+  <main class="layout">
+    <div id="map" aria-label="Interactive Iowa county nitrogen-load map"></div>
+
+    <aside>
+      <section class="card">
+        <h2>Map controls</h2>
+
+        <div class="control-row">
+          <label for="yearSlider">Year</label>
+          <div id="yearLabel">2001</div>
+        </div>
+
+        <input id="yearSlider" type="range" min="2001" max="2019" step="1" value="2001" />
+
+        <div style="margin-top:14px;">
+          <label for="metricSelect">Display</label>
+          <select id="metricSelect">
+            <option value="annual">Selected-year load</option>
+            <option value="mean">2001–2019 mean load</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Statewide summary</h2>
+        <div class="stats">
+          <div class="stat">
+            <div class="label">Counties with data</div>
+            <div class="value" id="statCount">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Mean load</div>
+            <div class="value" id="statMean">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Median load</div>
+            <div class="value" id="statMedian">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Maximum load</div>
+            <div class="value" id="statMax">—</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>County details</h2>
+        <div class="county-name" id="countyName">Select a county</div>
+
+        <div class="detail-row">
+          <span>Year</span>
+          <strong id="detailYear">—</strong>
+        </div>
+        <div class="detail-row">
+          <span>Annual load</span>
+          <strong id="detailLoad">—</strong>
+        </div>
+        <div class="detail-row">
+          <span>Mean load</span>
+          <strong id="detailMean">—</strong>
+        </div>
+        <div class="detail-row">
+          <span>FWMC</span>
+          <strong id="detailFwmc">—</strong>
+        </div>
+        <div class="detail-row">
+          <span>Coverage</span>
+          <strong id="detailCoverage">—</strong>
+        </div>
+      </section>
+
+      <section class="card note">
+        <strong>Method note</strong>
+        <p id="methodNote">Loading dataset…</p>
+      </section>
+    </aside>
+  </main>
+
+  <div class="status" id="status">Loading county data…</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+
+  <script>
+    const DATA_URL = "./index_data/county_loads.geojson";
+
+    const map = L.map("map", {
+      zoomControl: true,
+      minZoom: 6,
+      maxZoom: 12
+    }).setView([42.0, -93.5], 7);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    const yearSlider = document.getElementById("yearSlider");
+    const yearLabel = document.getElementById("yearLabel");
+    const metricSelect = document.getElementById("metricSelect");
+    const statusBox = document.getElementById("status");
+
+    let geojsonLayer;
+    let dataset;
+    let selectedLayer = null;
+
+    const breaks = [0, 5, 10, 15, 20, 30, 40];
+    const colours = [
+      "#ffffcc",
+      "#d9f0a3",
+      "#addd8e",
+      "#78c679",
+      "#41ab5d",
+      "#238443",
+      "#005a32"
+    ];
+
+    function numberOrNull(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function formatValue(value, digits = 2) {
+      const n = numberOrNull(value);
+      return n === null ? "No data" : n.toFixed(digits);
+    }
+
+    function loadForFeature(feature) {
+      const props = feature.properties || {};
+      const mode = metricSelect.value;
+
+      if (mode === "mean") {
+        return numberOrNull(props.mean_load);
+      }
+
+      const year = String(yearSlider.value);
+      return numberOrNull((props.load || {})[year]);
+    }
+
+    function colourForValue(value) {
+      if (value === null) return "#d3d3d3";
+
+      for (let i = breaks.length - 1; i >= 0; i--) {
+        if (value >= breaks[i]) return colours[i];
+      }
+
+      return colours[0];
+    }
+
+    function styleFeature(feature) {
+      const value = loadForFeature(feature);
+
+      return {
+        fillColor: colourForValue(value),
+        weight: 1,
+        opacity: 1,
+        color: "#ffffff",
+        fillOpacity: 0.82
+      };
+    }
+
+    function updateCountyDetails(feature) {
+      const props = feature.properties || {};
+      const year = String(yearSlider.value);
+
+      const annualLoad = numberOrNull((props.load || {})[year]);
+      const meanLoad = numberOrNull(props.mean_load);
+      const fwmc = numberOrNull((props.fwmc || {})[year]);
+      const coverage = numberOrNull((props.coverage || {})[year]);
+
+      document.getElementById("countyName").textContent = props.county || "Unknown county";
+      document.getElementById("detailYear").textContent = year;
+      document.getElementById("detailLoad").textContent =
+        annualLoad === null ? "No data" : `${annualLoad.toFixed(2)} kg N/ha/yr`;
+      document.getElementById("detailMean").textContent =
+        meanLoad === null ? "No data" : `${meanLoad.toFixed(2)} kg N/ha/yr`;
+      document.getElementById("detailFwmc").textContent =
+        fwmc === null ? "No data" : `${fwmc.toFixed(2)} mg/L`;
+      document.getElementById("detailCoverage").textContent =
+        coverage === null ? "No data" : `${(coverage * 100).toFixed(1)}%`;
+    }
+
+    function tooltipText(feature) {
+      const props = feature.properties || {};
+      const value = loadForFeature(feature);
+      const label = metricSelect.value === "mean"
+        ? "Mean load"
+        : `${yearSlider.value} load`;
+
+      return `<strong>${props.county || "Unknown county"}</strong><br>${label}: ${
+        value === null ? "No data" : value.toFixed(2) + " kg N/ha/yr"
+      }`;
+    }
+
+    function onEachFeature(feature, layer) {
+      layer.bindTooltip(() => tooltipText(feature), {
+        sticky: true,
+        direction: "auto"
+      });
+
+      layer.on({
+        mouseover: event => {
+          event.target.setStyle({
+            weight: 3,
+            color: "#222222",
+            fillOpacity: 0.92
+          });
+          event.target.bringToFront();
+        },
+
+        mouseout: event => {
+          if (event.target !== selectedLayer) {
+            geojsonLayer.resetStyle(event.target);
+          }
+        },
+
+        click: event => {
+          if (selectedLayer && selectedLayer !== event.target) {
+            geojsonLayer.resetStyle(selectedLayer);
+          }
+
+          selectedLayer = event.target;
+          selectedLayer.setStyle({
+            weight: 3,
+            color: "#111111",
+            fillOpacity: 0.95
+          });
+
+          updateCountyDetails(feature);
+          map.fitBounds(event.target.getBounds(), {
+            maxZoom: 9,
+            padding: [20, 20]
+          });
+        }
+      });
+    }
+
+    function currentValues() {
+      if (!dataset) return [];
+
+      return dataset.features
+        .map(loadForFeature)
+        .filter(value => value !== null)
+        .sort((a, b) => a - b);
+    }
+
+    function updateSummary() {
+      const values = currentValues();
+
+      document.getElementById("statCount").textContent = values.length;
+
+      if (!values.length) {
+        document.getElementById("statMean").textContent = "—";
+        document.getElementById("statMedian").textContent = "—";
+        document.getElementById("statMax").textContent = "—";
+        return;
+      }
+
+      const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+      const middle = Math.floor(values.length / 2);
+      const median = values.length % 2
+        ? values[middle]
+        : (values[middle - 1] + values[middle]) / 2;
+      const max = values[values.length - 1];
+
+      document.getElementById("statMean").textContent = mean.toFixed(2);
+      document.getElementById("statMedian").textContent = median.toFixed(2);
+      document.getElementById("statMax").textContent = max.toFixed(2);
+    }
+
+    function refreshMap() {
+      yearLabel.textContent = yearSlider.value;
+
+      if (!geojsonLayer) return;
+
+      geojsonLayer.setStyle(styleFeature);
+      geojsonLayer.eachLayer(layer => {
+        layer.setTooltipContent(tooltipText(layer.feature));
+      });
+
+      if (selectedLayer) {
+        selectedLayer.setStyle({
+          weight: 3,
+          color: "#111111",
+          fillOpacity: 0.95
+        });
+        updateCountyDetails(selectedLayer.feature);
+      }
+
+      updateSummary();
+    }
+
+    const legend = L.control({ position: "bottomright" });
+
+    legend.onAdd = function() {
+      const div = L.DomUtil.create("div", "legend");
+      div.innerHTML = "<strong>kg N/ha/yr</strong><br>";
+
+      for (let i = 0; i < breaks.length; i++) {
+        const from = breaks[i];
+        const to = breaks[i + 1];
+
+        div.innerHTML +=
+          `<i style="background:${colours[i]}"></i>` +
+          `${from}${to ? "&ndash;" + to : "+"}<br>`;
+      }
+
+      div.innerHTML += '<i style="background:#d3d3d3"></i>No data';
+      return div;
+    };
+
+    legend.addTo(map);
+
+    yearSlider.addEventListener("input", refreshMap);
+    metricSelect.addEventListener("change", refreshMap);
+
+    fetch(DATA_URL)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Could not load ${DATA_URL} (HTTP ${response.status})`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        dataset = data;
+
+        const years = data.metadata && Array.isArray(data.metadata.years)
+          ? data.metadata.years
+          : [2001, 2019];
+
+        yearSlider.min = Math.min(...years);
+        yearSlider.max = Math.max(...years);
+        yearSlider.value = yearSlider.min;
+        yearLabel.textContent = yearSlider.value;
+
+        geojsonLayer = L.geoJSON(data, {
+          style: styleFeature,
+          onEachFeature
+        }).addTo(map);
+
+        map.fitBounds(geojsonLayer.getBounds(), {
+          padding: [12, 12]
+        });
+
+        setTimeout(() => map.invalidateSize(true), 150);
+        window.addEventListener("resize", () => map.invalidateSize());
+
+        const method = data.metadata && data.metadata.method
+          ? data.metadata.method
+          : "County-level estimated nitrogen loads.";
+        const note = data.metadata && data.metadata.note
+          ? ` ${data.metadata.note}`
+          : "";
+
+        document.getElementById("methodNote").textContent = method + note;
+
+        updateSummary();
+        statusBox.remove();
+      })
+      .catch(error => {
+        console.error(error);
+        statusBox.classList.add("error");
+        statusBox.textContent =
+          `${error.message}. Confirm that index_data/county_loads.geojson exists and open this page through a local web server.`;
+      });
+  </script>
+</body>
+</html>
