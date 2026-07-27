@@ -11,7 +11,7 @@ authors:
   - family-names: Kaleita
     given-names: Amy
     affiliation: Iowa State University
-repository-code: "https://github.com/researchsam/County_load"
+repository-code: "https://github.com/researchsam/Nitrogen_load_dashboard"
 url: "https://researchsam.github.io/Nitrogen_load_dashboard/"
 license: MIT
 keywords:
