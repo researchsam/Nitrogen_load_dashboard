@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this analysis or its data, please cite the archived release."
+title: "County-Scale Nitrogen Export in Iowa and the Divergence Between Watershed Observation and Administrative Delivery"
+type: software
+version: 1.0.0
+date-released: 2026-07-27
+authors:
+  - family-names: Soetan
+    given-names: Samuel M.
+    affiliation: Iowa State University
+  - family-names: Kaleita
+    given-names: Amy
+    affiliation: Iowa State University
+repository-code: "https://github.com/researchsam/County_load"
+url: "https://researchsam.github.io/Nitrogen_load_dashboard/"
+license: MIT
+keywords:
+  - nitrogen export
+  - water quality
+  - Iowa
+  - HUC-8
+  - conservation targeting
