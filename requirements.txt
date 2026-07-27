@@ -1,7 +1,14 @@
-streamlit
 pandas
+numpy
 geopandas
-plotly
 shapely
-fiona
 pyproj
+fiona
+matplotlib
+seaborn
+requests
+scipy
+jupyterlab
+ipywidgets
+plotly
+streamlit
