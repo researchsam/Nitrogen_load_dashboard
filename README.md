@@ -150,8 +150,8 @@ Data retrieved through external services are restricted to the study's documente
 Python 3.11 or a compatible recent Python version is recommended.
 
 ```bash
-git clone https://github.com/researchsam/County_load.git
-cd County_load
+git clone https://github.com/researchsam/Nitrogen_load_dashboard.git
+cd Nitrogen_load_dashboard
 
 python -m venv .venv
 ```
